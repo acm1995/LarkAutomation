@@ -244,11 +244,20 @@
       margin-bottom: 8px;
       transition: background 0.2s;
       border: 1px solid transparent;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
     }
+
+    a.list-item { display: flex; }
 
     .list-item:hover {
       background: rgba(255, 255, 255, 0.05);
       border-color: var(--border);
+    }
+
+    .list-item:hover .title {
+      color: var(--accent);
     }
 
     .list-item .title {
@@ -258,6 +267,18 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      transition: color 0.2s;
+    }
+
+    .list-item .title::after {
+      content: ' ↗';
+      font-size: 10px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .list-item:hover .title::after {
+      opacity: 0.6;
     }
 
     .list-item .meta {
@@ -376,6 +397,13 @@
   <script>
     let data = null;
     let chartInstances = {};
+
+    const LARK_BASE_URL = 'https://tobehonest.sg.larksuite.com/wiki/EaTTwdWoxiRYV5kDSJolYR1WgVb';
+    const LARK_TABLE_ID = 'tblGUaTpCrTWPvUM';
+
+    function larkRecordUrl(recordId) {
+      return `${LARK_BASE_URL}?table=${LARK_TABLE_ID}&record=${recordId}`;
+    }
 
     const STAGE_COLORS = {
       'Idea': '#6c63ff',
@@ -533,13 +561,13 @@
       }
 
       container.innerHTML = d.pendingApprovals.map(v => `
-        <div class="list-item">
+        <a class="list-item" href="${larkRecordUrl(v.recordId)}" target="_blank" rel="noopener">
           <div>
             <div class="title">${v.title}</div>
             <div class="meta">${v.creator ? v.creator.join(', ') : 'Unassigned'} · Due: ${v.deadline}</div>
           </div>
           <span class="badge ${v.status.includes('Script') ? 'warning' : 'info'}">${v.status.includes('Script') ? '📝 Script' : '🎬 Video'}</span>
-        </div>`).join('');
+        </a>`).join('');
     }
 
     function renderWorkload(d) {
@@ -576,24 +604,24 @@
 
       d.overdue.slice(0, 5).forEach(v => {
         items.push(`
-          <div class="list-item">
+          <a class="list-item" href="${larkRecordUrl(v.recordId)}" target="_blank" rel="noopener">
             <div>
               <div class="title">${v.title}</div>
               <div class="meta">${v.status} · ${v.creator ? v.creator.join(', ') : ''}</div>
             </div>
             <span class="badge danger">${v.daysOverdue}d overdue</span>
-          </div>`);
+          </a>`);
       });
 
       d.upcoming.slice(0, 5).forEach(v => {
         items.push(`
-          <div class="list-item">
+          <a class="list-item" href="${larkRecordUrl(v.recordId)}" target="_blank" rel="noopener">
             <div>
               <div class="title">${v.title}</div>
               <div class="meta">${v.status} · ${v.creator ? v.creator.join(', ') : ''}</div>
             </div>
             <span class="badge ${v.daysLeft <= 1 ? 'warning' : 'success'}">${v.daysLeft}d left</span>
-          </div>`);
+          </a>`)
       });
 
       container.innerHTML = items.length > 0
