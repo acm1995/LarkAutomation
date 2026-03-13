@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TBH Pipeline Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
+  <style>
+    :root {
+      --bg-primary: #0f0f1a;
+      --bg-secondary: #1a1a2e;
+      --bg-card: #16213e;
+      --bg-card-hover: #1c2a4a;
+      --accent: #6c63ff;
+      --accent-glow: rgba(108, 99, 255, 0.3);
+      --success: #00c897;
+      --warning: #ffb347;
+      --danger: #ff6b6b;
+      --info: #4ecdc4;
+      --text-primary: #e8e8f0;
+      --text-secondary: #9898b0;
+      --text-muted: #6868808;
+      --border: rgba(255, 255, 255, 0.06);
+      --radius: 16px;
+      --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ─── Header ─────────────────────────────────────────── */
+    .header {
+      background: linear-gradient(135deg, var(--bg-secondary), var(--bg-card));
+      border-bottom: 1px solid var(--border);
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(20px);
+    }
+
+    .header h1 {
+      font-size: 22px;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), var(--info));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.5px;
+    }
+
+    .header-meta {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .header-meta .updated {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .btn-refresh {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-refresh:hover { transform: translateY(-1px); box-shadow: 0 4px 15px var(--accent-glow); }
+    .btn-refresh.loading { opacity: 0.6; pointer-events: none; }
+    .btn-refresh.loading .icon { animation: spin 1s linear infinite; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+    /* ─── Layout ─────────────────────────────────────────── */
+    .container {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    /* ─── KPI Cards ──────────────────────────────────────── */
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .kpi-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+
+    .kpi-card.accent::before { background: var(--accent); }
+    .kpi-card.success::before { background: var(--success); }
+    .kpi-card.warning::before { background: var(--warning); }
+    .kpi-card.danger::before { background: var(--danger); }
+    .kpi-card.info::before { background: var(--info); }
+
+    .kpi-card:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.1); }
+
+    .kpi-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .kpi-value {
+      font-size: 32px;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .kpi-sub {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 6px;
+    }
+
+    /* ─── Grid Layout ────────────────────────────────────── */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .dashboard-grid.equal {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    @media (max-width: 1024px) {
+      .dashboard-grid, .dashboard-grid.equal { grid-template-columns: 1fr; }
+    }
+
+    /* ─── Cards ──────────────────────────────────────────── */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title .emoji { font-size: 18px; }
+
+    /* ─── Pipeline Funnel ────────────────────────────────── */
+    .funnel-stage {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+      padding: 6px 0;
+    }
+
+    .funnel-label {
+      font-size: 12px;
+      width: 170px;
+      text-align: right;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+
+    .funnel-bar-container {
+      flex: 1;
+      height: 24px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 6px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .funnel-bar {
+      height: 100%;
+      border-radius: 6px;
+      transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+      min-width: 2px;
+      display: flex;
+      align-items: center;
+      padding-left: 8px;
+    }
+
+    .funnel-bar span {
+      font-size: 11px;
+      font-weight: 700;
+      color: white;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    }
+
+    /* ─── Lists ──────────────────────────────────────────── */
+    .list-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 10px;
+      margin-bottom: 8px;
+      transition: background 0.2s;
+      border: 1px solid transparent;
+    }
+
+    .list-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: var(--border);
+    }
+
+    .list-item .title {
+      font-size: 13px;
+      font-weight: 500;
+      max-width: 280px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .list-item .meta {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+
+    .badge.danger { background: rgba(255, 107, 107, 0.15); color: var(--danger); }
+    .badge.warning { background: rgba(255, 179, 71, 0.15); color: var(--warning); }
+    .badge.success { background: rgba(0, 200, 151, 0.15); color: var(--success); }
+    .badge.info { background: rgba(78, 205, 196, 0.15); color: var(--info); }
+    .badge.accent { background: rgba(108, 99, 255, 0.15); color: var(--accent); }
+
+    /* ─── Workload Bars ──────────────────────────────────── */
+    .workload-person {
+      margin-bottom: 14px;
+    }
+
+    .workload-name {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .workload-bar-bg {
+      height: 20px;
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 6px;
+      overflow: hidden;
+      display: flex;
+    }
+
+    .workload-segment {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+      transition: width 0.6s ease;
+    }
+
+    /* ─── Loading / Error ────────────────────────────────── */
+    .loading-overlay {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 400px;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .loading-spinner {
+      width: 48px;
+      height: 48px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    .error-state {
+      background: rgba(255, 107, 107, 0.08);
+      border: 1px solid rgba(255, 107, 107, 0.2);
+      border-radius: var(--radius);
+      padding: 24px;
+      text-align: center;
+      color: var(--danger);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 32px;
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+
+    /* ─── Chart Containers ───────────────────────────────── */
+    .chart-container {
+      position: relative;
+      width: 100%;
+      height: 260px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>⚡ TBH Pipeline Dashboard</h1>
+    <div class="header-meta">
+      <span class="updated" id="lastUpdated"></span>
+      <button class="btn-refresh" onclick="refreshData()">
+        <span class="icon">↻</span> Refresh
+      </button>
+    </div>
+  </div>
+
+  <div class="container" id="app">
+    <div class="loading-overlay" id="loadingState">
+      <div class="loading-spinner"></div>
+      <p style="color: var(--text-secondary)">Loading pipeline data from Lark Base...</p>
+    </div>
+  </div>
+
+  <script>
+    let data = null;
+    let chartInstances = {};
+
+    const STAGE_COLORS = {
+      'Idea': '#6c63ff',
+      'In Development': '#7c73ff',
+      'Pending Script Approval': '#ffb347',
+      'Revising Script': '#ff6b6b',
+      'To Shoot': '#4ecdc4',
+      'To Edit': '#45b7d1',
+      'Editing': '#5da5db',
+      'Pending Video Approval': '#ffb347',
+      'Revising Video': '#ff6b6b',
+      'Approved': '#00c897',
+      'Scheduled': '#2ecc71',
+      'Uncategorized': '#555580',
+      'Cancelled': '#888',
+    };
+
+    async function loadData() {
+      try {
+        const res = await fetch('/api/summary');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        data = await res.json();
+        render(data);
+      } catch (err) {
+        document.getElementById('app').innerHTML = `
+          <div class="error-state">
+            <h3>⚠️ Could not load data</h3>
+            <p style="margin-top: 8px">${err.message}</p>
+            <p style="margin-top: 12px; font-size: 12px; color: var(--text-secondary)">
+              Make sure your <code>.env</code> has valid Lark API credentials and the app has access to TBH Base.
+            </p>
+          </div>`;
+      }
+    }
+
+    async function refreshData() {
+      const btn = document.querySelector('.btn-refresh');
+      btn.classList.add('loading');
+      try {
+        const res = await fetch('/api/refresh');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        data = await res.json();
+        render(data);
+      } catch (err) {
+        alert('Refresh failed: ' + err.message);
+      } finally {
+        btn.classList.remove('loading');
+      }
+    }
+
+    function render(d) {
+      const totalActive = d.totalRecords - (d.videosPerStage['Cancelled'] || 0) - (d.videosPerStage['Scheduled'] || 0);
+      const overdueCount = d.overdue.length;
+      const pendingCount = d.pendingApprovals.length;
+      const revisionCount = d.revisions.currentlyInRevision;
+      const avgOutput = d.outputRate.avgPerWeek.toFixed(1);
+
+      document.getElementById('lastUpdated').textContent = `Updated: ${new Date(d.generatedAt).toLocaleTimeString()}`;
+
+      document.getElementById('app').innerHTML = `
+        <!-- KPI Row -->
+        <div class="kpi-row">
+          <div class="kpi-card accent">
+            <div class="kpi-label">Total Videos</div>
+            <div class="kpi-value">${d.totalRecords}</div>
+            <div class="kpi-sub">${totalActive} active in pipeline</div>
+          </div>
+          <div class="kpi-card ${pendingCount > 0 ? 'warning' : 'success'}">
+            <div class="kpi-label">Pending Approval</div>
+            <div class="kpi-value">${pendingCount}</div>
+            <div class="kpi-sub">Scripts & videos awaiting review</div>
+          </div>
+          <div class="kpi-card ${overdueCount > 0 ? 'danger' : 'success'}">
+            <div class="kpi-label">Overdue</div>
+            <div class="kpi-value">${overdueCount}</div>
+            <div class="kpi-sub">${overdueCount > 0 ? 'Action needed!' : 'All on track ✓'}</div>
+          </div>
+          <div class="kpi-card ${revisionCount > 2 ? 'danger' : 'info'}">
+            <div class="kpi-label">In Revision</div>
+            <div class="kpi-value">${revisionCount}</div>
+            <div class="kpi-sub">${d.revisions.scriptRevisions} scripts, ${d.revisions.videoRevisions} videos</div>
+          </div>
+          <div class="kpi-card ${parseFloat(avgOutput) >= 5 ? 'success' : 'warning'}">
+            <div class="kpi-label">Avg Output</div>
+            <div class="kpi-value">${avgOutput}</div>
+            <div class="kpi-sub">videos/week (target: 5+)</div>
+          </div>
+        </div>
+
+        <!-- Pipeline + Approvals -->
+        <div class="dashboard-grid">
+          <div class="card">
+            <div class="card-title"><span class="emoji">📊</span> Pipeline Funnel</div>
+            <div id="funnelChart"></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><span class="emoji">🔔</span> Pending Approvals</div>
+            <div id="approvalsList"></div>
+          </div>
+        </div>
+
+        <!-- Workload + Overdue -->
+        <div class="dashboard-grid equal">
+          <div class="card">
+            <div class="card-title"><span class="emoji">👥</span> Team Workload</div>
+            <div id="workloadChart"></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><span class="emoji">🚨</span> Overdue & Upcoming</div>
+            <div id="deadlinesList"></div>
+          </div>
+        </div>
+
+        <!-- Output Rate Chart -->
+        <div class="card" style="margin-bottom: 24px">
+          <div class="card-title"><span class="emoji">📈</span> Weekly Output Rate</div>
+          <div class="chart-container">
+            <canvas id="outputChart"></canvas>
+          </div>
+        </div>
+      `;
+
+      renderFunnel(d);
+      renderApprovals(d);
+      renderWorkload(d);
+      renderDeadlines(d);
+      renderOutputChart(d);
+    }
+
+    function renderFunnel(d) {
+      const container = document.getElementById('funnelChart');
+      const stages = Object.entries(d.videosPerStage).filter(([_, c]) => c > 0);
+      const max = Math.max(...stages.map(([_, c]) => c), 1);
+
+      container.innerHTML = stages.map(([stage, count]) => {
+        const pct = Math.max((count / max) * 100, 4);
+        const color = STAGE_COLORS[stage] || '#555';
+        return `
+          <div class="funnel-stage">
+            <div class="funnel-label">${stage}</div>
+            <div class="funnel-bar-container">
+              <div class="funnel-bar" style="width: ${pct}%; background: ${color}">
+                <span>${count}</span>
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function renderApprovals(d) {
+      const container = document.getElementById('approvalsList');
+      if (d.pendingApprovals.length === 0) {
+        container.innerHTML = '<div class="empty-state">✅ No pending approvals — all clear!</div>';
+        return;
+      }
+
+      container.innerHTML = d.pendingApprovals.map(v => `
+        <div class="list-item">
+          <div>
+            <div class="title">${v.title}</div>
+            <div class="meta">${v.creator ? v.creator.join(', ') : 'Unassigned'} · Due: ${v.deadline}</div>
+          </div>
+          <span class="badge ${v.status.includes('Script') ? 'warning' : 'info'}">${v.status.includes('Script') ? '📝 Script' : '🎬 Video'}</span>
+        </div>`).join('');
+    }
+
+    function renderWorkload(d) {
+      const container = document.getElementById('workloadChart');
+      if (d.workload.length === 0) {
+        container.innerHTML = '<div class="empty-state">No active assignments</div>';
+        return;
+      }
+
+      const maxW = Math.max(...d.workload.map(w => w.total), 1);
+      const stageKeys = [...new Set(d.workload.flatMap(w => Object.keys(w.byStage)))];
+
+      container.innerHTML = d.workload.map(w => {
+        const segments = Object.entries(w.byStage).map(([stage, count]) => {
+          const pct = (count / maxW) * 100;
+          const color = STAGE_COLORS[stage] || '#555';
+          return `<div class="workload-segment" style="width: ${pct}%; background: ${color}" title="${stage}: ${count}">${count > 0 ? count : ''}</div>`;
+        }).join('');
+
+        return `
+          <div class="workload-person">
+            <div class="workload-name">
+              <span>${w.name}</span>
+              <span style="color: var(--text-secondary); font-weight: 400">${w.total} videos</span>
+            </div>
+            <div class="workload-bar-bg">${segments}</div>
+          </div>`;
+      }).join('');
+    }
+
+    function renderDeadlines(d) {
+      const container = document.getElementById('deadlinesList');
+      const items = [];
+
+      d.overdue.slice(0, 5).forEach(v => {
+        items.push(`
+          <div class="list-item">
+            <div>
+              <div class="title">${v.title}</div>
+              <div class="meta">${v.status} · ${v.creator ? v.creator.join(', ') : ''}</div>
+            </div>
+            <span class="badge danger">${v.daysOverdue}d overdue</span>
+          </div>`);
+      });
+
+      d.upcoming.slice(0, 5).forEach(v => {
+        items.push(`
+          <div class="list-item">
+            <div>
+              <div class="title">${v.title}</div>
+              <div class="meta">${v.status} · ${v.creator ? v.creator.join(', ') : ''}</div>
+            </div>
+            <span class="badge ${v.daysLeft <= 1 ? 'warning' : 'success'}">${v.daysLeft}d left</span>
+          </div>`);
+      });
+
+      container.innerHTML = items.length > 0
+        ? items.join('')
+        : '<div class="empty-state">✅ No overdue or upcoming deadlines</div>';
+    }
+
+    function renderOutputChart(d) {
+      if (chartInstances.output) chartInstances.output.destroy();
+
+      const ctx = document.getElementById('outputChart')?.getContext('2d');
+      if (!ctx) return;
+
+      const weeks = d.outputRate.weeklyOutputs;
+      chartInstances.output = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: weeks.map(w => w.week),
+          datasets: [{
+            label: 'Videos Published',
+            data: weeks.map(w => w.count),
+            backgroundColor: 'rgba(108, 99, 255, 0.6)',
+            borderColor: 'rgba(108, 99, 255, 1)',
+            borderWidth: 1,
+            borderRadius: 6,
+          }, {
+            label: 'Target (5/week)',
+            data: weeks.map(() => 5),
+            type: 'line',
+            borderColor: 'rgba(255, 107, 107, 0.6)',
+            borderDash: [6, 4],
+            pointRadius: 0,
+            fill: false,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: { color: '#9898b0', font: { size: 11 } } },
+          },
+          scales: {
+            x: { ticks: { color: '#6868808', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.03)' } },
+            y: { ticks: { color: '#6868808', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.03)' }, beginAtZero: true },
+          },
+        },
+      });
+    }
+
+    // Auto-refresh every 5 minutes
+    setInterval(loadData, 5 * 60 * 1000);
+    loadData();
+  </script>
+
+</body>
+</html>

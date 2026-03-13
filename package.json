@@ -1,0 +1,25 @@
+{
+  "name": "tbh-pipeline-automation",
+  "version": "1.0.0",
+  "description": "TBH YouTube Channel Pipeline Automation Suite — Lark Base API Integration",
+  "main": "src/dashboard.js",
+  "scripts": {
+    "dashboard": "node src/dashboard.js",
+    "analytics": "node src/analytics.js",
+    "notify": "node src/notifier.js",
+    "notify:test": "node src/notifier.js --test",
+    "setup-fields": "node src/setup-fields.js",
+    "setup-fields:dry": "node src/setup-fields.js --dry-run",
+    "operations": "node src/operations.js",
+    "test-connection": "node src/lark-client.js --test"
+  },
+  "dependencies": {
+    "axios": "^1.7.0",
+    "chalk": "^4.1.2",
+    "cli-table3": "^0.6.5",
+    "dotenv": "^16.4.0",
+    "express": "^4.21.0",
+    "open": "^8.4.2"
+  },
+  "type": "commonjs"
+}
